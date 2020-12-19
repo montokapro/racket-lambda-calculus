@@ -2,7 +2,7 @@
 
 (require racket/match)
 
-(provide shift shift-up shift-down substitute reduce eval)
+(provide shift shift-up shift-down substitute reduce eval ast)
 
 (define (shift expr offset n op)
   (match expr
@@ -52,3 +52,19 @@
      `(abs ,(eval e))]
     [_
      exp]))
+
+(define (ast exprs)
+  (match (car exprs)
+    ['app
+     (let* ([fexprs (ast (cdr exprs))]
+            [xexprs (ast (cadr fexprs))])
+       (list
+        `(app ,(car fexprs) ,(car xexprs))
+        (cadr xexprs)))]
+    ['abs
+     (let ([eexprs (ast (cdr exprs))])
+       (list
+        `(abs ,(car eexprs))
+        (cadr eexprs)))]
+    [(var v)
+     (list v (cdr exprs))]))

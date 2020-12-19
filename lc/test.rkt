@@ -143,3 +143,31 @@
      (eval '(app (abs (abs (app (app 4 2) (abs (app 1 3))))) (abs (app 5 1))))
      ; λ 3 (λ 6 1) (λ 1 (λ 7 1))
      '(abs (app (app 3 (abs (app 6 1))) (abs (app 1 (abs (app 7 1))))))))))
+
+(run-tests
+ (test-suite
+  "ast"
+  (test-case "var"
+    (check-equal?
+     (ast '(1))
+     '(1 ())))
+  (test-case "var - extra"
+    (check-equal?
+     (ast '(1 2))
+     '(1 (2))))
+  (test-case "abs"
+    (check-equal?
+     (ast '(abs 1))
+     '((abs 1) ())))
+  (test-case "abs - extra"
+    (check-equal?
+     (ast '(abs 1 2))
+     '((abs 1) (2))))
+  (test-case "app"
+    (check-equal?
+     (ast '(app 1 2))
+     '((app 1 2) ())))
+  (test-case "comple - deep"
+    (check-equal?
+     (ast '(abs app abs 1 2))
+     '((abs (app (abs 1) 2)) ())))))
