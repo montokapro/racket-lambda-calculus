@@ -53,6 +53,54 @@
 
 (run-tests
  (test-suite
+  "postfix-contract-inner"
+  (test-case "empty"
+    (check-equal?
+     (postfix-contract-inner '() '())
+     '(() ())))
+  (test-case "many"
+    (check-equal?
+     (postfix-contract-inner '(1 2 3) '())
+     '(() (3 2 1))))
+  (test-case "preserve out"
+    (check-equal?
+     (postfix-contract-inner '() '(out))
+     '(() (out))))
+  (test-case "preserve unknown"
+    (check-equal?
+     (postfix-contract-inner '(in) '())
+     '(() (in))))))
+
+(run-tests
+ (test-suite
+  "postfix-contract"
+  (test-case "empty"
+    (check-equal?
+     (postfix-contract '())
+     '()))
+  (test-case "var"
+    (check-equal?
+     (postfix-contract '(1))
+     '(1)))
+  (test-case "abs"
+    (check-equal?
+     (postfix-contract '((abs 1)))
+     '(1 abs)))
+  (test-case "app"
+    (check-equal?
+     (postfix-contract '((app 1 2)))
+     '(2 1 app)))
+  (test-case "many"
+    (check-equal?
+     (postfix-contract '(1 (abs 2) (app 3 4)))
+     '(4 3 app 2 abs 1)))
+  (test-case "deep"
+    (check-equal?
+     (postfix-contract '((app (abs (app 1 2)) (app 3 4))))
+     '(4 3 app 2 1 app abs app)))))
+
+(run-tests
+ (test-suite
   "format"
   (test-case "empty"
     (check-equal?
