@@ -1,4 +1,4 @@
-#lang racket/base
+#lang racket
 
 (require rackunit/text-ui)
 (require rackunit "writer.rkt")
@@ -8,68 +8,48 @@
   "contract-inner"
   (test-case "empty"
     (check-equal?
-     (contract-inner '() '())
+     (contract-inner '() '() identity)
      '(() ())))
   (test-case "many"
     (check-equal?
-     (contract-inner '(1 2 3) '())
+     (contract-inner '(1 2 3) '() identity)
      '(() (3 2 1))))
   (test-case "preserve out"
     (check-equal?
-     (contract-inner '() '(out))
+     (contract-inner '() '(out) identity)
      '(() (out))))
   (test-case "preserve unknown"
     (check-equal?
-     (contract-inner '(in) '())
+     (contract-inner '(in) '() identity)
      '(() (in))))))
 
 (run-tests
  (test-suite
-  "contract"
+  "prefix-contract"
   (test-case "empty"
     (check-equal?
-     (contract '())
+     (prefix-contract '())
      '()))
   (test-case "var"
     (check-equal?
-     (contract '(1))
+     (prefix-contract '(1))
      '(1)))
   (test-case "abs"
     (check-equal?
-     (contract '((abs 1)))
+     (prefix-contract '((abs 1)))
      '(abs 1)))
   (test-case "app"
     (check-equal?
-     (contract '((app 1 2)))
+     (prefix-contract '((app 1 2)))
      '(app 1 2)))
   (test-case "many"
     (check-equal?
-     (contract '(1 (abs 2) (app 3 4)))
+     (prefix-contract '(1 (abs 2) (app 3 4)))
      '(app 3 4 abs 2 1)))
   (test-case "deep"
     (check-equal?
-     (contract '((app (abs (app 1 2)) (app 3 4))))
+     (prefix-contract '((app (abs (app 1 2)) (app 3 4))))
      '(app abs app 1 2 app 3 4)))))
-
-(run-tests
- (test-suite
-  "postfix-contract-inner"
-  (test-case "empty"
-    (check-equal?
-     (postfix-contract-inner '() '())
-     '(() ())))
-  (test-case "many"
-    (check-equal?
-     (postfix-contract-inner '(1 2 3) '())
-     '(() (3 2 1))))
-  (test-case "preserve out"
-    (check-equal?
-     (postfix-contract-inner '() '(out))
-     '(() (out))))
-  (test-case "preserve unknown"
-    (check-equal?
-     (postfix-contract-inner '(in) '())
-     '(() (in))))))
 
 (run-tests
  (test-suite

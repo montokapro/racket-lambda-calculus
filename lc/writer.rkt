@@ -1,8 +1,9 @@
 #lang racket
 
-(provide contract contract-inner postfix-contract postfix-contract-inner format)
+(provide contract-inner prefix-contract postfix-contract format)
 
-(define (contract-inner in out)
+; eval relies heavily on the prefix convention of racket s-exps
+(define (contract-inner in out eval)
   (cond
     ((empty? in) (list in out))
     (#t
@@ -10,33 +11,19 @@
            [t (cdr in)])
        (match h
          [`(app ,f ,x)
-          (contract-inner (list* x f 'app t) out)]
+          (contract-inner (append (eval h) t) out eval)]
          [`(abs ,e)
-          (contract-inner (list* e 'abs t) out)]
+          (contract-inner (append (eval h) t) out eval)]
          [(var v)
-          (contract-inner t (cons v out))])))))
+          (contract-inner t (cons v out) eval)])))))
 
 ; list? → list?
-(define (contract in)
-  (cadr (contract-inner in '())))
-
-(define (postfix-contract-inner in out)
-  (cond
-    ((empty? in) (list in out))
-    (#t
-     (let ([h (car in)]
-           [t (cdr in)])
-       (match h
-         [`(app ,f ,x)
-          (postfix-contract-inner (list* 'app f x t) out)]
-         [`(abs ,e)
-          (postfix-contract-inner (list* 'abs e t) out)]
-         [(var v)
-          (postfix-contract-inner t (cons v out))])))))
+(define (prefix-contract in)
+  (cadr (contract-inner in '() reverse)))
 
 ; list? → list?
 (define (postfix-contract in)
-  (cadr (postfix-contract-inner in '())))
+  (cadr (contract-inner in '() identity)))
 
 (define (token->string t)
   (cond
