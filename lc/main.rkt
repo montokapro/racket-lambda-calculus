@@ -2,7 +2,7 @@
 
 (require racket/match)
 
-(provide shift shift-up shift-down substitute reduce eval ast)
+(provide shift shift-up shift-down substitute reduce eval-all eval-by-name eval-by-value ast)
 
 (define (shift expr offset n op)
   (match expr
@@ -40,18 +40,58 @@
 (define (reduce expr env)
   (substitute (shift-down expr) env))
 
-(define (eval exp)
-  (match exp
-    [`(app ,f ,x)
-     (match f
-       [`(abs ,body)
-        (eval (reduce body `(,x)))]
-       [_
-        `(app ,(eval f) ,(eval x))])]
-    [`(abs ,e)
-     `(abs ,(eval e))]
-    [_
-     exp]))
+(define recur
+  ((lambda (f)
+     (f f))
+   (lambda (z)
+     (lambda (f)
+       (f
+        (lambda (x)
+          ;; (display "recur-print: ")
+          ;; (displayln x)
+          (((z z) f) x)))))))
+
+(define eval-all-fixpoint
+  (lambda (f)
+    (lambda (expr)
+      (match expr
+        [`(app ,a ,b)
+         (match a
+           [`(abs ,c)
+            (f (reduce c (list b)))]
+           [_
+            `(app ,(f a) ,(f b))])]
+        [`(abs ,a)
+         `(abs ,(f a))]
+        [_
+         expr]))))
+
+(define eval-all
+  (recur eval-all-fixpoint))
+
+(define eval-by-name-fixpoint
+  (lambda (f)
+    (lambda (expr)
+      (match expr
+        [`(app (abs ,a) ,b)
+         (f (reduce a (list b)))]
+        [_
+         expr]))))
+
+(define eval-by-name
+  (recur eval-by-name-fixpoint))
+
+(define eval-by-value-fixpoint
+  (lambda (f)
+    (lambda (expr)
+      (match expr
+        [`(app (abs ,a) ,b)
+         (reduce a (list (f b)))]
+        [_
+         expr]))))
+
+(define eval-by-value
+  (recur eval-by-value-fixpoint))
 
 (define (ast exprs)
   (match (car exprs)
