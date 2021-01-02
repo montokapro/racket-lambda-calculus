@@ -2,7 +2,12 @@
 
 (require racket/match)
 
-(provide shift shift-up shift-down substitute reduce eval-all eval-by-name eval-by-value ast)
+(provide
+ shift shift-up shift-down substitute reduce
+ eval-all
+ eval-by-name-fixpoint eval-by-name
+ eval-by-value-fixpoint eval-by-value
+ ast)
 
 (define (shift expr offset n op)
   (match expr
@@ -10,11 +15,13 @@
      `(app ,(shift f offset n op) ,(shift x offset n op))]
     [`(abs ,e)
      `(abs ,(shift e (+ offset 1) n op))]
-    [(var v)
+    [(? number? v)
      (if
       (>= v offset)
       (op v n)
-      v)]))
+      v)]
+    [_
+     `(shift ,expr ,offset ,n ,op)]))
 
 (define (shift-up expr)
   (shift expr 1 1 +))
@@ -28,11 +35,13 @@
      `(app ,(substitute-inner f env offset) ,(substitute-inner x env offset))]
     [`(abs ,e)
      `(abs ,(substitute-inner e env (+ offset 1)))]
-    [(var v)
+    [(? number? v)
      (if
       (and (>= v offset) (< (- v offset) (length env)))
       (shift (list-ref env (- v offset)) 1 offset +)
-      v)]))
+      v)]
+    [_
+     `(substitute-inner ,expr ,env ,offset)]))
 
 (define (substitute expr env)
   (substitute-inner expr env 0))

@@ -158,6 +158,22 @@
 
 (run-tests
  (test-suite
+  "eval-by-name-fixpoint"
+  (test-case "step"
+    (check-equal?
+     ((eval-by-name-fixpoint (λ (a) `(eval ,a))) '(app (abs 1) 2))
+     '(eval 2)))))
+
+(run-tests
+ (test-suite
+  "eval-by-value-fixpoint"
+  (test-case "step"
+    (check-equal?
+     ((eval-by-value-fixpoint (λ (a) `(eval ,a))) '(app (abs 1) 2))
+     `(shift (eval 2) 1 0 ,+)))))
+
+(run-tests
+ (test-suite
   "eval-by-name"
   (test-case "irreducible"
     (check-equal?
