@@ -3,51 +3,40 @@
 (require racket/match)
 
 (provide
- shift shift-up shift-down substitute reduce
+ shift substitute
  eval-all
  eval-by-name-fixpoint eval-by-name
  eval-by-value-fixpoint eval-by-value
  ast)
 
-(define (shift expr offset n op)
+; https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.296.2485&rep=rep1&type=pdf - slide 9
+
+(define (shift expr offset n)
   (match expr
     [`(app ,f ,x)
-     `(app ,(shift f offset n op) ,(shift x offset n op))]
+     `(app ,(shift f offset n) ,(shift x offset n))]
     [`(abs ,e)
-     `(abs ,(shift e (+ offset 1) n op))]
+     `(abs ,(shift e (+ offset 1) n))]
     [(? number? v)
-     (if
-      (>= v offset)
-      (op v n)
-      v)]
+     (cond
+      ((> v offset) (- (+ v n) 1))
+      (#t v))]
     [_
-     `(shift ,expr ,offset ,n ,op)]))
+     `(shift ,expr ,offset ,n)]))
 
-(define (shift-up expr)
-  (shift expr 1 1 +))
-
-(define (shift-down expr)
-  (shift expr 1 1 -))
-
-(define (substitute-inner expr env offset)
+(define (substitute expr term offset)
   (match expr
     [`(app ,f ,x)
-     `(app ,(substitute-inner f env offset) ,(substitute-inner x env offset))]
+     `(app ,(substitute f term offset) ,(substitute x term offset))]
     [`(abs ,e)
-     `(abs ,(substitute-inner e env (+ offset 1)))]
+     `(abs ,(substitute e term (+ offset 1)))]
     [(? number? v)
-     (if
-      (and (>= v offset) (< (- v offset) (length env)))
-      (shift (list-ref env (- v offset)) 1 offset +)
-      v)]
+     (cond
+       ((> v offset) (- v 1))
+       ((= v offset) (shift term 0 offset))
+       (#t v))]
     [_
-     `(substitute-inner ,expr ,env ,offset)]))
-
-(define (substitute expr env)
-  (substitute-inner expr env 0))
-
-(define (reduce expr env)
-  (substitute (shift-down expr) env))
+     `(substitute ,expr ,term ,offset)]))
 
 (define recur
   ((lambda (f)
@@ -67,7 +56,7 @@
         [`(app ,a ,b)
          (match a
            [`(abs ,c)
-            (f (reduce c (list b)))]
+            (f (substitute c b 1))]
            [_
             `(app ,(f a) ,(f b))])]
         [`(abs ,a)
@@ -83,7 +72,7 @@
     (lambda (expr)
       (match expr
         [`(app (abs ,a) ,b)
-         (f (reduce a (list b)))]
+         (f (substitute a b 1))]
         [_
          expr]))))
 
@@ -95,7 +84,7 @@
     (lambda (expr)
       (match expr
         [`(app (abs ,a) ,b)
-         (reduce a (list (f b)))]
+         (substitute a (f b) 1)]
         [_
          expr]))))
 
