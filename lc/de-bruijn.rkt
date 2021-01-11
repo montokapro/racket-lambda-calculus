@@ -1,30 +1,49 @@
-#lang racket
+#lang racket/base
 
-; https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.296.2485&rep=rep1&type=pdf
+(require
+ data/either
+ data/applicative
+ data/monad
+ megaparsack
+ megaparsack/text)
 
-(require racket/match)
+(require "main.rkt")
 
 (provide
- token-depth tokens-depth
- parse-balanced-term)
+ app/p
+ abs/p
+ var/p)
 
-(define (token-depth token)
-  (match token
-    ['app 2]
-    ['abs 1]
-    [_ 0]))
+(define whitespace/p (many/p space/p))
 
-;; parallelizable step
-(define (tokens-depth tokens)
-  (foldr + 0 (map token-depth tokens)))
+(define positive-digit/p
+  (label/p "positive number" (char-in/p "123456789")))
 
-(define (parse-balanced-term in tokens)
-  ((lambda (depth)
-     (cond
-       ((< depth 0)
-        (error "invalid sequence"))
-       ((> depth 0)
-        (append tokens (parse-balanced-term (drop in depth) (take in depth))))
-       ((= depth 0)
-        tokens)))
-   (tokens-depth tokens)))
+(define positive-integer/p
+  (label/p "integer"
+           (do [positive-digit <- positive-digit/p]
+               [digits <- (many/p digit/p)]
+               (pure (string->number (apply string (cons positive-digit digits)))))))
+
+(define app/p
+  (do (string/p "app")
+      whitespace/p
+      [a <- expr/p]
+      whitespace/p
+      [b <- expr/p]
+      (pure (eval-by-name `(app ,b ,a)))))
+
+(define abs/p
+  (do (string/p "abs")
+      whitespace/p
+      [a <- expr/p]
+      (pure `(abs ,a))))
+
+(define var/p positive-integer/p)
+
+; TODO: factor out try/p to improve error message
+(define expr/p
+  (or/p
+   (try/p app/p)
+   (try/p abs/p)
+   var/p))
